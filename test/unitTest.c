@@ -17,16 +17,17 @@
   you'll want them all set to 1 for a thorough test.
 */
 
-#define RUN_EXMIP1 1
-#define RUN_AFIRO 1
-#define RUN_BOEING2 1
+#define RUN_EXMIP1 0
+#define RUN_AFIRO 0
+#define RUN_BOEING2 0
 #define RUN_EXPRIMALRAY 1
-#define RUN_EXDUALRAY 1
-#define RUN_GALENETBNDS 1
-#define RUN_GALENETLEQ 1
-#define RUN_GALENETMIXED 1
-#define RUN_GALENET 1
+#define RUN_EXDUALRAY 0
+#define RUN_GALENETBNDS 0
+#define RUN_GALENETLEQ 0
+#define RUN_GALENETMIXED 0
+#define RUN_GALENET 0
 
+#include <stdio.h>
 
 #include "dylp.h"
 
@@ -265,6 +266,7 @@ int main (int argc, char **argv)
     main_lp->consys = main_sys ;
     main_lp->rowsze = main_sys->rowsze ;
     main_lp->colsze = main_sys->colsze ;
+    main_lpopts->context = cxSINGLELP ;
     main_lpopts->forcecold = TRUE ;
     main_lpopts->fullsys = FALSE ;
     main_lpopts->finpurge.vars = TRUE ;
@@ -316,7 +318,7 @@ int main (int argc, char **argv)
 /*
   Call dylp to free internal structures, then free main_sys.
 */
-    comflg(main_lp->ctlopts,lpctlONLYFREE|lpctlNOFREE) ;
+    main_lpopts->context = cxUNLOAD ;
     dylp(main_lp,main_lpopts,main_lptols,NULL) ;
     consys_free(main_sys) ;
     main_sys = NULL ;
@@ -337,11 +339,11 @@ int main (int argc, char **argv)
     errcnt++ ; }
   else
   { dy_checkdefaults(main_sys,main_lpopts,main_lptols) ;
-    comflg(main_lp->ctlopts,lpctlONLYFREE|lpctlNOFREE) ;
     main_lp->phase = dyINV ;
     main_lp->consys = main_sys ;
     main_lp->rowsze = main_sys->rowsze ;
     main_lp->colsze = main_sys->colsze ;
+    main_lpopts->context = cxSINGLELP ;
     main_lpopts->forcecold = TRUE ;
     main_lpopts->fullsys = FALSE ;
     main_lpopts->finpurge.vars = TRUE ;
@@ -372,7 +374,7 @@ int main (int argc, char **argv)
     errcnt += dytest_colPrimals(main_lp,main_lptols,main_lpopts) ;
     errcnt += dytest_rowPrimals(main_lp,main_lptols,main_lpopts) ;
 
-    comflg(main_lp->ctlopts,lpctlONLYFREE|lpctlNOFREE) ;
+    main_lpopts->context = cxUNLOAD ;
     dylp(main_lp,main_lpopts,main_lptols,NULL) ;
     consys_free(main_sys) ;
     main_sys = NULL ;
@@ -393,11 +395,11 @@ int main (int argc, char **argv)
     errcnt++ ; }
   else
   { dy_checkdefaults(main_sys,main_lpopts,main_lptols) ;
-    comflg(main_lp->ctlopts,lpctlONLYFREE|lpctlNOFREE) ;
     main_lp->phase = dyINV ;
     main_lp->consys = main_sys ;
     main_lp->rowsze = main_sys->rowsze ;
     main_lp->colsze = main_sys->colsze ;
+    main_lpopts->context = cxSINGLELP ;
     main_lpopts->forcecold = TRUE ;
     main_lpopts->fullsys = FALSE ;
     main_lpopts->finpurge.vars = TRUE ;
@@ -438,7 +440,7 @@ int main (int argc, char **argv)
     errcnt += dytest_colPrimals(main_lp,main_lptols,main_lpopts) ;
     errcnt += dytest_rowPrimals(main_lp,main_lptols,main_lpopts) ;
 
-    comflg(main_lp->ctlopts,lpctlONLYFREE|lpctlNOFREE) ;
+    main_lpopts->context = cxUNLOAD ;
     dylp(main_lp,main_lpopts,main_lptols,NULL) ;
     consys_free(main_sys) ;
     main_sys = NULL ;
@@ -463,11 +465,11 @@ int main (int argc, char **argv)
     errcnt++ ; }
   else
   { dy_checkdefaults(main_sys,main_lpopts,main_lptols) ;
-    comflg(main_lp->ctlopts,lpctlONLYFREE|lpctlNOFREE) ;
     main_lp->phase = dyINV ;
     main_lp->consys = main_sys ;
     main_lp->rowsze = main_sys->rowsze ;
     main_lp->colsze = main_sys->colsze ;
+    main_lpopts->context = cxINITIALLP ;
     main_lpopts->forcecold = TRUE ;
     main_lpopts->fullsys = TRUE ;
     main_lpopts->finpurge.vars = FALSE ;
@@ -499,7 +501,7 @@ int main (int argc, char **argv)
     main_lpopts->forcecold = FALSE ;
 
     dyio_outfmt(dy_logchn,dy_gtxecho,"Resolving exprimalray ...") ;
-    lpretval = do_lp(main_lp,main_lptols,main_lpopts,1) ;
+    lpretval = do_lp(main_lp,main_lptols,main_lpopts,2) ;
     dyio_outfmt(ttyout,dy_gtxecho,"\n  %s, z = %.12f.\n",
 		dy_prtlpret(lpretval),main_lp->obj) ;
     if (dumpsoln == TRUE)
@@ -533,7 +535,7 @@ int main (int argc, char **argv)
     errcnt += dytest_colPrimals(main_lp,main_lptols,main_lpopts) ;
     errcnt += dytest_rowPrimals(main_lp,main_lptols,main_lpopts) ;
 
-    comflg(main_lp->ctlopts,lpctlONLYFREE|lpctlNOFREE) ;
+    main_lpopts->context = cxUNLOAD ;
     dylp(main_lp,main_lpopts,main_lptols,NULL) ;
     consys_free(main_sys) ;
     main_sys = NULL ;

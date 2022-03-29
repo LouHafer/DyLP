@@ -225,7 +225,7 @@ int main (int argc, char **argv)
   main_lptols = NULL ;
   dy_defaults(&main_lpopts,&main_lptols) ;
   main_lp = (lpprob_struct *) CALLOC(1,sizeof(lpprob_struct)) ;
-  main_lp->owner = 0x42 ;
+  main_lp->owner = (void *) 0x42 ;
 /*
   Initialise the basis factorisation package with a data structure capable of
   50 constraints.  The second parameter controls how many basis updates the

@@ -39,11 +39,16 @@ You can use [coinbrew](https://github.com/coin-or/coinbrew) to automate the
 process of cloning the repositories for dylp and its dependencies and building
 the software.
 This is the best way to get started.
+If you want to build in a separate directory from
+the source files, use the coinbrew option `--build-dir`.
+If you want to install in a specified directory, use the coinbrew option
+`--prefix`.
 
 Once you have created the necessary repositories, the minimal action
-required for configuration is to run the command
+required for configuration and build is to run the commands
 ```
 ./configure
+make
 ```
 in the top level directory of the distribution.
 Run
@@ -51,13 +56,27 @@ Run
 ./configure --help
 ```
 for a list of available configuration options.
-In particular, if you want to build and install in a separate directory from
-the source files, use the `--prefix` option.
+If you're building in a directory separate from the source directory, run
+configure and make from the build directory as
+```
+cd /path/to/build/Dylp
+path/to/src/Dylp/configure
+make
+```
+To install in a specified directory, use the `--prefix` option to configure as
+```
+path/to/src/Dylp/configure --prefix /path/to/install
+make
+make install
+```
 
 For a test of correct installation, dylp runs its own unit test and the
 OsiDylp unit test.
-Simply type the command `make test` in the top level build directory to build
-and run the unit tests.
+Simply type the command
+```
+make test
+```
+in the top level build directory to build and run the unit tests.
 
 
 ## Examples
@@ -83,7 +102,7 @@ Execute the command '`plain --help`' for usage information.
 
 ## Dependencies
 
-Appropriate version of dylp's dependencies are specified in the `config.yml`
+Appropriate versions of dylp's dependencies are specified in the `config.yml`
 used by coinbrew.
 
 ## Bugs

@@ -18072,7 +18072,8 @@ fi
   LIBS="$coin_save_LIBS"
 
 
-# Finalize the flags. That's as much as DylpLib needs.
+# Finalize the flags. That's as much as DylpLib needs. Make sure DylpTest has
+# the flags required by DylpLib.
 
 
    if test "$BUILDTOOLS_DEBUG" = 1 ; then
@@ -19498,8 +19499,9 @@ printf "%s\n" "#define DYLP_HAS_NETLIB 1" >>confdefs.h
   fi
 
 
-# Finalize libs and cflags for OsiDylpLib, then tack on information for dylp,
-# which is not yet installed.
+# Finalize libs and cflags for OsiDylpLib and OsiDylpTest, then tack on
+# information for dylp, which is not yet installed.
+
 
    if test "$BUILDTOOLS_DEBUG" = 1 ; then
         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: FINALIZE_FLAGS for OsiDylpLib:" >&5

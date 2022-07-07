@@ -1,181 +1,193 @@
-#!/bin/csh -f
+#!/bin/bash
 
-# svn/cvs: $Id$
-
-# Simple csh script to run the osi_dylp main program. Mainly to make it a bit
+# Simple bash script to run the osi_dylp main program. Mainly to make it a bit
 # easier to find MPS files and get the parameters right. Also, the script
 # will look for a dylp options (.spc) file and add it to the osi_dylp command
 # line.
 
-# Edit here to choose the C interface (osi_dylp) or the OSI interface
-# (odsi+dylp) as the default.
+# Wrappers. Dylp's mps reader doesn't do zipped files, so we'll need to unzip
+# before calling the wrapper. OsiDylp can handle zipped files.
 
-set wrapper = (./osi_dylp)
-# set wrapper = (./odsi+dylp)
+wrappers=(./osi_dylp ./odsi+dylp)
+dfltWrapper=0
+mustUnzip=1
 
-# Check for MPS file directories in likely places.
+# The help message
 
-set mpsSearchDirs
-foreach dataDir (Data ../Data ../../Data ../../../Data ../../../../Data)
-  if (-d $dataDir && -x $dataDir) then
-    echo "Checking $dataDir"
-    foreach dir (`ls $dataDir`)
-      set dir = "$dataDir/$dir"
-      if (-d $dir && -x $dir) then
-	set mpsSearchDirs = ($mpsSearchDirs $dir)
-      endif
-    end
-  endif
-end
-set mpsSearchDirs = (. $mpsSearchDirs)
+printHelp () {
+  cat <<TillDone
 
-# Usage message
+usage: plain [--odsi|--dylp] [--help] [wrapper options] mps_file
 
-set usage =  "plain [-odsi|-dylp] [additional parameters] <mps file>"
-set usage1 = "  Where -odsi selects the odsi+dylp (OsiDylp/C++) wrapper"
-set usage2 = "        -dylp selects the osi_dylp (native/C) wrapper"
-set usage3 = "        and [additional parameters] should be appropriate"
-set usage4 = "        for the specified wrapper."
-set usage5 = "        The default wrapper is $wrapper[1]"
-set usage5 = "        The default wrapper is $wrapper[1]"
-set usage6 = "        -h anywhere in the command line gets this help message."
-set usage7 = "        MPS file search directories are $mpsSearchDirs"
+  -odsi selects the odsi+dylp (OsiDylp/C++) wrapper
+  -dylp selects the osi_dylp (native/C) wrapper
 
-if ($#argv < 1) then
-  set argv = "--help"
-endif
+  MPS file search directories are
+TillDone
 
-# Does the user want help?
+  for dir in ${mpsSearchDirs[*]} ; do
+    echo "    $dir"
+  done
+  echo ""
 
-if ("$argv[*]" =~ *-h*) then
-  echo "Usage: $usage"
-  echo $usage1:q
-  echo $usage2:q
-  echo $usage3:q
-  echo $usage4:q
-  echo $usage5:q
-  echo $usage6:q
-  echo $usage7:q
-  if (-x $wrapper) then
-    $wrapper -h
-  else
-    echo "Execute $wrapper -h to see the help text for $wrapper."
-  endif
-  exit
-endif
+  echo "  $wrapper options are:"
+  $wrapper -h
+  echo ""
+}
+
+# Check for MPS files in likely places. The current directory and the
+# installation directory (substituted during configuration, if defined) are
+# assigned directly. Then check some likely suspects. We need the trailing '/'
+# here to avoid issues below with something like '/exmip1'.
+
+mpsSearchDirs=(./ @NETLIB_DATA@/)
+for dataDir in ../Data ../../Data ../../../Data ; do
+  if test -d $dataDir && test -x $dataDir ; then
+    for dir in `ls $dataDir` ; do
+      dir="$dataDir/$dir"
+      if test -d $dir && test -x $dir &&
+         { ls $dir/*.mps >& /dev/null ||
+	   ls $dir/*.mps.gz >& /dev/null ; } ; then 
+	mpsSearchDirs+=("$dir/")
+      fi
+    done
+  fi
+done
 
 # See if the user has specified a front-end on the command line.
 
-switch ($argv[1])
-  case -odsi:
-    set wrapper = "./odsi+dylp"
+wrapper=${wrappers[$dfltWrapper]}
+case "${1/#--/-}" in
+  -odsi )
+    wrapper=${wrappers[1]}
+    mustUnzip=0
     shift
-    breaksw
-  case -dylp:
-    set wrapper = "./osi_dylp"
+    ;;
+  -dylp )
+    wrapper=${wrappers[0]}
+    mustUnzip=1
     shift
-    breaksw
-endsw
+    ;;
+esac
 
-# MPS file should be the last parameter
+# If we have no parameters left, or what's left is --help, print the help
+# and exit
 
-set example = $argv[$#argv]
+if test $# -le 0 || expr "$*" : '^.*-help.*$' >& /dev/null ; then
+  printHelp
+  exit
+fi
 
-# Did the user hand us an absolute path? Dissect accordingly.
+# MPS file should be the last parameter. Anything that's left gets passed to
+# the wrapper.
 
-if ($example =~ /*) then
-  echo "Dissecting absolute path."
-  set mpsSearchDirs = $example:h
-  set example = $example:t
-endif
+parameters=($*)
+paramCnt=${#parameters[*]}
+userMPS=${parameters[$paramCnt-1]}
+unset parameters[$paramCnt-1]
+theRest="${parameters[@]}"
+
+# Dissect userFile. This could be anything from a simple example name to a
+# full absolute path. Try to parse it into a path, a base (example) name, and
+# an extension.
+
+if expr $userMPS : '^.*/.*$' >& /dev/null ; then
+  userPath=`echo $userMPS | sed -e 's/^\(.*\)\/[^/]*$/\1/'`
+  userPath="${userPath}/"
+else
+  userPath=''
+fi
+userBase=${userMPS#$userPath}
+userExt=`echo $userBase | sed -e 's/^[^.]*\(.*\)$/\1/'`
+userBase=${userBase%$userExt}
+
+# echo "after dissection: '$userPath' '$userBase' '$userExt'"
+
+# Search for the mps file. If the user handed us an absolute path, that
+# overrules the search directories.
+
+if expr $userPath : '^/.*$' >& /dev/null ; then
+  mpsSearchDirs=($userPath)
+fi
+
+# echo "MPS search directories: '${mpsSearchDirs[*]}'"
 
 # Search for an mps file. The reason for putting the loop with suffixes on the
-# outside is so that we'll find the shortest suffix, whereever it might reside.
+# outside is so that we'll find the shortest suffix, whereever it might
+# reside. Note that the user may well have included the suffix in the
+# example name and we'll never consider explicit suffixes, and the suffix may
+# be nonexistent.
 
-set mpsdir
-set mpsfile
-set mpsext
-foreach ext ("" ".mps" ".gz" ".mps.gz")
-  set candidate = ${example}${ext}
-  foreach dir ($mpsSearchDirs)
-    if (-e $dir/$candidate) then
-      set mpsfile = $dir/$candidate
-      set mpsdir = $dir
-      set mpsext = $ext
-      break ; break
-    endif
-  end
-end
+for ext in "" ".mps" ".gz" ".mps.gz" ; do
+  candidate=${userBase}${ext}
+  for dir in ${mpsSearchDirs[*]} ; do
+    if test -e $dir/$candidate ; then
+      mpsFile=$candidate
+      mpsDir=$dir
+    fi
+  done
+done
 
-if ("$mpsfile" == "") then
- echo "Can't"' locate mps file for "'$example'".'
- echo "Usage: $usage"
- echo $usage1:q
- echo $usage2:q
- echo $usage3:q
- echo $usage4:q
- echo $usage5:q
- echo $usage6:q
- $wrapper -h
- exit
-endif
+if test -z $mpsFile ; then
+  echo "Can't locate ${userMPS}; exiting."
+  exit
+fi
 
-if ("$mpsext" == "") then
-  set example = $example:r
-endif
+# echo "found ${mpsDir}${mpsFile}"
 
-# Dylp's native mps reader does not read from compressed files. Unzip if
-# necessary.
 
-if ($wrapper =~ *osi_dylp && $mpsfile =~ *.gz) then
-  set lclext = `echo $mpsext | sed -e 's/\.gz//'`
-  set unzipmpsfile = ./${example}${lclext}
-  gunzip -c $mpsfile > $unzipmpsfile
-  echo "Created uncompressed copy of $mpsfile as $unzipmpsfile."
+# Do we need to unzip this file?
+
+if test $mustUnzip -eq 1 && expr "$mpsFile" : '^.*\.gz$' >& /dev/null ; then
+  echo "  unzipping $mpsFile for $wrapper"
+  unzipmpsFile=`echo $mpsFile | sed -e 's/^\(.*\)\.gz$/\1/'`
+  gunzip -c ${mpsDir}${mpsFile} > $unzipmpsFile
+  echo "  created uncompressed copy of $mpsFile as $unzipmpsFile."
 else
-  set unzipmpsfile = $mpsfile
-endif
+  unzipmpsFile=${mpsDir}${mpsFile}
+fi
+
+# echo "unzipped file: $unzipmpsFile"
 
 # Check for example.spc in the directory where the mps file was located, and in
 # the current directory. Failing that, look for generic.spc in the same
 # places.
 
-if (-e $mpsdir/${example}.spc) then
-  set spcfile = "-o $mpsdir/${example}.spc"
-else if (-e ${example}.spc) then
-  set spcfile = "-o ${example}.spc"
-else if (-e $mpsdir/generic.spc) then
-  set spcfile = "-o generic.spc"
-else if (-e generic.spc) then
-  set spcfile = "-o generic.spc"
+if test -e $mpsDir/${userBase}.spc ; then
+  spcfile="-o $mpsDir/${userBase}.spc"
+elif test -e ${userBase}.spc ; then
+  spcfile="-o ${userBase}.spc"
+elif test -e $mpsDir/generic.spc ; then
+  spcfile="-o generic.spc"
+elif test -e generic.spc ; then
+  spcfile="-o generic.spc"
 else
-  set spcfile
-endif
+  spcfile=
+fi
 
-# If there are two or more arguments, the rest are assumed to be
-# command line parameters.
-
-if ($#argv > 1) then
-  @ flagcnt = $#argv - 1
-  set flags = "$argv[1-$flagcnt]"
-else
-  set flags = ""
-endif
+# echo "spc file: '$spcfile'"
 
 # Go to it.
 
-echo -n "Processing $mpsfile"
-if ("$spcfile" != "") then
+echo -n "Processing $unzipmpsFile"
+if test "$spcfile" != "" ; then
   echo -n ", spc = $spcfile"
-endif
-if ("$flags" != "") then
-  echo -n ", flags = $flags"
-endif
+fi
+if test "$theRest" != "" ; then
+  echo -n ", options = $theRest"
+fi
 echo "."
 
-echo "$wrapper $spcfile -m ${unzipmpsfile} -L ${example}.log -O ${example}.out $flags"
+echo "$wrapper $spcfile -p 1"
+echo "         -m ${unzipmpsFile} -L ${userBase}.log -O ${userBase}.out $flags"
 
-$wrapper $spcfile \
-      -m ${unzipmpsfile} -L ${example}.log \
-      -O ${example}.out $flags
+$wrapper $spcfile -p 1 \
+      -m ${unzipmpsFile} -L ${userBase}.log \
+      -O ${userBase}.out $flags
 
+# echo "status is $?"
+
+if test $mustUnzip -eq 1 ; then
+  rm $unzipmpsFile
+fi
+exit

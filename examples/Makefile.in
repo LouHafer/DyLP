@@ -140,10 +140,10 @@ $(EXE_CXX): $(OBJS_CXX)
 
 mostlyclean clean: 
 	rm -rf $(EXE_CXX) $(EXE_C) $(OBJS_CXX) $(OBJS_C)
-	rm -rf afiro.log afiro.out greenbeb.log greenbeb.out
+	rm -rf *.log *.out
 
 distclean maintainer-clean: clean
-	rm -rf Makefile
+	rm -rf Makefile plain
 
 .cpp.@OBJEXT@:
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(INCL) -c -o $@ $<

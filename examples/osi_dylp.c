@@ -212,12 +212,16 @@ static void print_help (ioid chn, bool echo, const char *name)
 
 #if defined(_MSC_VER) || defined(__MSVCRT__)
 
-typedef long int __time_t ;
-typedef long int __suseconds_t ;
+  typedef long int __time_t ;
+  typedef long int __suseconds_t ;
 
+# if defined(_WIN64)
+  // Msys2 MinGW handles this on its own
+# else
 struct timeval
 { __time_t tv_sec ;
   __suseconds_t tv_usec ; } ;
+#endif
 
 static void get_timeval (struct timeval *tv)
 /*
@@ -742,20 +746,13 @@ int main (int argc, char *argv[])
   shell, doing a one-time solution for an LP, set up a default of cold start
   using the full system and a logical basis. This can be overridden in a .spc
   file if desired.
-
-  For reasons that escape me at the moment, the parser fails on Windows. This
-  may get fixed eventually. For now, disabled by the simple expedient of
-  forcing optpath to NULL.
 */
   dy_defaults(&main_lpopts,&main_lptols) ;
   main_lpopts->forcecold = TRUE ;
   main_lpopts->fullsys = TRUE ;
   main_lpopts->coldbasis = ibLOGICAL ;
-# if defined(_MSC_VER) || defined(__MSVCRT__)
-  optpath = NULL ;
-# endif
   if (optpath != NULL)
-  { cmdchn = dyio_openfile(optpath,"r") ;
+  { cmdchn = dyio_openfile(optpath,"rb") ;
     if (cmdchn == IOID_INV) exit (1) ;
     (void) dyio_setmode(cmdchn,'l') ;
     switch (dy_processcmds(cmdchn,silent,main_lpopts,main_lptols))

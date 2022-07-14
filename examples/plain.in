@@ -5,6 +5,15 @@
 # will look for a dylp options (.spc) file and add it to the osi_dylp command
 # line.
 
+# This next bit (prefix, exec_prefix, add bindir to PATH) is required to add
+# the installation bin directory to PATH so that we can find DLLs on Windows.
+# It does no harm in a unix environment.
+
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+
+PATH=${PATH}:@bindir@
+
 # Wrappers. Dylp's mps reader doesn't do zipped files, so we'll need to unzip
 # before calling the wrapper. OsiDylp can handle zipped files.
 
@@ -190,4 +199,5 @@ $wrapper $spcfile -p 1 \
 if test $mustUnzip -eq 1 ; then
   rm $unzipmpsFile
 fi
+
 exit

@@ -724,7 +724,9 @@ bool dyio_ttyq (ioid id)
   const char *rtnnme = "dyio_ttyq" ;
 
   extern int isatty(int fildes) ;
-  /*extern int fileno(FILE *stream) ;*/
+#ifndef _POSIX_C_SOURCE
+  extern int fileno(FILE *stream) ;
+#endif
 
 /*
   Check to make sure the stream ID is OK.

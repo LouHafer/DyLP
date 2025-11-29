@@ -25,7 +25,7 @@ jobs:
         os: [ubuntu-22.04, ubuntu-24.04]
         build_static: [true, false]
         flags: [ADD_CXXFLAGS=-fvisibility=hidden]
-        download_requirements: [sudo apt install -y -qq gfortran liblapack-dev libmetis-dev libnauty2-dev]
+        download_requirements: [sudo apt install -y -qq gfortran liblapack-dev libmetis-dev libnauty-dev]
         include:
           - os: macos-13
             build_static: false
